@@ -1,0 +1,9 @@
+L2 Error: 0.0025209861911008173
+L2relativeError : 0.10002466897195628
+h2 Error: 0.1430582631337912
+h2 relative Error: 0.278793291095775
+Current directory: /Users/rameshchandrasau/Research/NN_Code_Biharmonic/2D/P1/DRM
+
+y_sym = (1/(2*pi**2))*sin(pi*x1)*sin(pi*x2) 
+
+Lambda = 4000
