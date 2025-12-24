@@ -50,12 +50,19 @@ def pdeloss(net,intx1,intx2,pdedata,bdx1,bdx2,nx1,nx2,g_1,g_2,bw_diri,bw_neumann
  
     
     loss_int_1 = mse_loss(lap_u, zero_vec)
+    
+    #loss interior for with-reaction term
+    loss_int_1_with_reaction = mse_loss(u, zero_vec)
+    
     loss_int_2 = torch.mean(out*pdedata)
     loss_int_3 = torch.square(torch.mean(ones_vec*out))
-
     
+    
+    #loss for PDE with reaction term
+    loss_int = 0.5*loss_int_1 + 0.5*loss_int_1_with_reaction - loss_int_2 
 
-    loss_int = 0.5*loss_int_1 - loss_int_2 + balancing_wt*loss_int_3
+    #loss for PDE without reaction term
+    #loss_int = 0.5*loss_int_1  - loss_int_2 + balancing_wt*loss_int_3
 
     bout_u,bout_dudn = bdry(bdx1,bdx2,nx1,nx2,net)
 

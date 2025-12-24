@@ -141,7 +141,7 @@ def closure():
 
 losslist = []
 
-for epoch in range(600): 
+for epoch in range(2000): 
     loss, loss_int, loss_bdry = closure()
     losslist.append(loss)
 

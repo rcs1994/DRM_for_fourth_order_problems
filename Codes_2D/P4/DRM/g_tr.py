@@ -6,7 +6,13 @@ x1, x2 = symbols('x1 x2')
 
 # exact solution
 #y_sym = x1**2*x2**2*(1-x1)**2*(1-x2)**2
-y_sym = (1/(2*pi**2))*sin(2*pi*x1)*sin(2*pi*x2) 
+
+# solution for PDE without reaction term
+#y_sym = (1/(2*pi**2))*sin(2*pi*x1)*sin(2*pi*x2) 
+
+# solution for PDE with reaction term
+y_sym = (1/(2*pi**2))*sin(pi*x1)*sin(pi*x2)
+
 #y_sym = x1*x2*(1-x1)*(1-x2)
 
 
@@ -17,7 +23,11 @@ bilaplacian_y = diff(laplacian_y, x1, 2) + diff(laplacian_y, x2, 2)
 lap_x = diff(laplacian_y,x1)
 lap_y = diff(laplacian_y,x2)
 
-f_sym = bilaplacian_y 
+# source for PDE without reaction term
+#f_sym = bilaplacian_y 
+
+#source for PDE with reaction term
+f_sym = bilaplacian_y + y_sym
 
 #print("bilaplacian_y",bilaplacian_y)
 
