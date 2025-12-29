@@ -14,7 +14,7 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import model,pde,data,tools,g_tr,validation
 from time import time
-
+import csv
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
@@ -22,16 +22,19 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 torch.set_default_dtype(torch.float32)
 
 y = model.NN()
-y.apply(model.init_weights)
+# load weights if available
+if os.path.exists('Codes_2D/P2/DRM/results/y.pt'):
+    y = torch.load('Codes_2D/P2/DRM/results/y.pt', weights_only=False)
+else:
+    y.apply(model.init_weights)
 
-dataname = '5000pts'
+dataname = '20000pts'
 name = 'results/'
 
-lambda_parameter = 4000
+lambda_parameter = 8000
 
-bw_dir = lambda_parameter * 0.5
+bw_dir = 0.5 * lambda_parameter
 bw_neu = 1.0
-
 if not os.path.exists(name):
     os.makedirs(name)
 
@@ -68,15 +71,19 @@ f,bdrydata_dirichlet,bdrydata_neumann,ygt = tools.from_numpy_to_tensor([f_np,dir
 
 
 
-optimizer = opt.Adam(params, lr=1e-4, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.0)
+# Adam optimizer for initial training
+optimizer_adam = opt.Adam(params, lr=1e-4, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.0)
 
 # It reduces the learning rate by factor=0.1 if the loss hasn't improved for 100 epochs
-scheduler = opt.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=500)
+scheduler = opt.lr_scheduler.ReduceLROnPlateau(optimizer_adam, mode='min', factor=0.1, patience=500)
 
 # Alternatively, you can use MultiStepLR to decay the learning rate at specific milestones
 
 # Learning rate will decay by gamma at 10000 and 13000 iterations
-#scheduler = opt.lr_scheduler.MultiStepLR(optimizer, milestones=[8000, 12000], gamma=0.1)
+#scheduler = opt.lr_scheduler.MultiStepLR(optimizer_adam, milestones=[8000, 12000], gamma=0.1)
+
+# LBFGS optimizer for fine-tuning (will be used after Adam)
+optimizer_lbfgs = opt.LBFGS(params, line_search_fn='strong_wolfe', max_iter=20, tolerance_grad=1e-10, tolerance_change=1e-10)
 
 
 
@@ -86,14 +93,14 @@ loader = torch.utils.data.DataLoader([intx1,intx2],batch_size = 2000,shuffle = T
 
 
 
-def closure():
+def closure_adam():
     tot_loss = 0
     tot_loss_int = 0
     tot_loss_neumann = 0
     tot_loss_diri = 0
 
     for i, subquad in enumerate(loader):
-        optimizer.zero_grad()
+        optimizer_adam.zero_grad()
         ttintx1 = Variable(subquad[0].float(), requires_grad=True)
         ttintx2 = Variable(subquad[1].float(), requires_grad=True)
 
@@ -103,7 +110,7 @@ def closure():
         )
 
         loss.backward()
-        optimizer.step()
+        optimizer_adam.step()
 
         tot_loss += loss
         tot_loss_int += loss_int
@@ -120,6 +127,34 @@ def closure():
 
     #if schedular is MultistepLR, then scheduler.step()
     return nploss, nploss_int, nploss_neumann, nploss_diri
+
+
+def closure_lbfgs():
+    """Closure function for LBFGS optimizer - computes loss over all data"""
+    optimizer_lbfgs.zero_grad()
+    
+    tot_loss = 0
+    tot_loss_int = 0
+    tot_loss_neumann = 0
+    tot_loss_diri = 0
+
+    for i, subquad in enumerate(loader):
+        ttintx1 = Variable(subquad[0].float(), requires_grad=True)
+        ttintx2 = Variable(subquad[1].float(), requires_grad=True)
+
+        loss, loss_int_D2, loss_int, loss_neumann, loss_diri = pde.pdeloss(
+            y, ttintx1, ttintx2, f, tbdx1, tbdx2, tnx1, tnx2,
+            bdrydata_dirichlet, bdrydata_neumann, bw_dir, bw_neu
+        )
+
+        tot_loss += loss
+        tot_loss_int += loss_int
+        tot_loss_neumann += loss_neumann
+        tot_loss_diri += loss_diri
+
+    tot_loss.backward()
+    
+    return tot_loss
   
 
 
@@ -139,8 +174,14 @@ def closure():
 
 losslist = []
 
-for epoch in range(200): 
-    loss, loss_int, loss_neumann, loss_diri = closure()
+print("=" * 80)
+print("PHASE 1: Training with Adam Optimizer")
+print("=" * 80)
+
+# Phase 1: Train with Adam optimizer
+adam_epochs = 10000
+for epoch in range(adam_epochs): 
+    loss, loss_int, loss_neumann, loss_diri = closure_adam()
     losslist.append(loss)
 
     if epoch % 100 == 0:
@@ -149,8 +190,72 @@ for epoch in range(200):
         # Compute and print L2 error
         l2_error, l2_relative_error = validation.compute_error(y)
         print(f"Epoch {epoch} | L2 Error: {l2_error:.8f} | Relative L2 Error: {l2_relative_error:.8f}")
+
+print("\n" + "=" * 80)
+print("PHASE 2: Fine-tuning with LBFGS Optimizer")
+print("=" * 80)
+
+# Phase 2: Fine-tune with LBFGS optimizer
+lbfgs_iterations = 0
+for iteration in range(lbfgs_iterations):
+    
+    def lbfgs_closure():
+        """Closure that computes loss and performs backward pass"""
+        optimizer_lbfgs.zero_grad()
         
+        tot_loss = 0
+        for i, subquad in enumerate(loader):
+            ttintx1 = Variable(subquad[0].float(), requires_grad=True)
+            ttintx2 = Variable(subquad[1].float(), requires_grad=True)
+
+            loss, loss_int_D2, loss_int, loss_neumann, loss_diri = pde.pdeloss(
+                y, ttintx1, ttintx2, f, tbdx1, tbdx2, tnx1, tnx2,
+                bdrydata_dirichlet, bdrydata_neumann, bw_dir, bw_neu
+            )
+            tot_loss += loss
+
+        tot_loss.backward()
+        return tot_loss
+    
+    optimizer_lbfgs.step(lbfgs_closure)
+    
+    # Evaluate loss after LBFGS step (without torch.no_grad() since pdeloss needs gradients)
+    if iteration % 100 == 0 or iteration == lbfgs_iterations - 1:
+        tot_loss = 0
+        tot_loss_int = 0
+        tot_loss_neumann = 0
+        tot_loss_diri = 0
         
+        for i, subquad in enumerate(loader):
+            ttintx1 = Variable(subquad[0].float(), requires_grad=True)
+            ttintx2 = Variable(subquad[1].float(), requires_grad=True)
+
+            loss, loss_int_D2, loss_int, loss_neumann, loss_diri = pde.pdeloss(
+                y, ttintx1, ttintx2, f, tbdx1, tbdx2, tnx1, tnx2,
+                bdrydata_dirichlet, bdrydata_neumann, bw_dir, bw_neu
+            )
+            tot_loss += loss
+            tot_loss_int += loss_int
+            tot_loss_neumann += loss_neumann
+            tot_loss_diri += loss_diri
+        
+        loss_val = tot_loss.detach().numpy()
+        loss_int_val = tot_loss_int.detach().numpy()
+        loss_neumann_val = tot_loss_neumann.detach().numpy()
+        loss_diri_val = tot_loss_diri.detach().numpy()
+        
+        losslist.append(loss_val)
+        
+        print(f"LBFGS Iteration {iteration} | Total loss: {loss_val:.8f} | Loss_int: {loss_int_val:.8f} | Loss_neumann: {loss_neumann_val:.8f} | Loss_dirichlet: {loss_diri_val:.8f}")
+        validation.plot_2D(y, name+"y_plot/"+'lbfgs_iter{}'.format(iteration))
+        # Compute and print L2 error
+        l2_error, l2_relative_error = validation.compute_error(y)
+        print(f"LBFGS Iteration {iteration} | L2 Error: {l2_error:.8f} | Relative L2 Error: {l2_relative_error:.8f}")
+
+print("\n" + "=" * 80)
+print("Training Complete!")
+print("=" * 80)
+
         
 torch.save(y,name+'y.pt')        
 
@@ -289,6 +394,25 @@ print(f"h2 Error: {h2_error}")
 print(f"h2 relative Error: {h2_relativeError}")
 
 
+
+print(f"L2 Error: {l2_error}")
+print(f"L2relativeError : {l2_realtiveError}")
+print(f"h2 Error: {h2_error}")
+print(f"h2 relative Error: {h2_relativeError}")
+
+# Save errors to CSV
+csv_path = 'Codes_2D/P2/DRM/results/errors.csv'
+os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+
+with open(csv_path, 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Metric', 'Value'])
+    writer.writerow(['L2 Error', l2_error])
+    writer.writerow(['L2 Relative Error', l2_realtiveError])
+    writer.writerow(['H2 Error', h2_error])
+    writer.writerow(['H2 Relative Error', h2_relativeError])
+
+print(f"Errors saved to {csv_path}")
 
 
 

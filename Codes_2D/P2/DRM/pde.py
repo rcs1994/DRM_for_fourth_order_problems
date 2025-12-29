@@ -38,7 +38,7 @@ def bdry(x1,x2,n1,n2,net):
     return out, u_x*n1 + u_y*n2
 
 
-def pdeloss(net,intx1,intx2,pdedata,bdx1,bdx2,nx1,nx2,bdrydata_diri,bdrydat_neumann,bw_diri,bw_neumann):
+def pdeloss(net,intx1,intx2,pdedata,bdx1,bdx2,nx1,nx2,bdrydata_diri,bdrydat_neumann,bw_diri,bw_neumann,iw = 1.0):
     out = net(intx1,intx2)
     bdx1  = bdx1.detach().requires_grad_(True)
     bdx2  = bdx2.detach().requires_grad_(True)
@@ -64,6 +64,6 @@ def pdeloss(net,intx1,intx2,pdedata,bdx1,bdx2,nx1,nx2,bdrydata_diri,bdrydat_neum
 
 
 
-    loss = loss_int + loss_bdry
+    loss = iw*loss_int + loss_bdry
 
     return loss, loss_int_D2, loss_int , loss_bdry_neumann, loss_bdry_diri

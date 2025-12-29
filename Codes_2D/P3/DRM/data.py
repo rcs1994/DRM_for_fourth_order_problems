@@ -5,8 +5,9 @@ import os
 import g_tr as gt
 
 
-N = 8000
-dataname = '5000pts'
+N = 20000
+dataname = f'{N}pts'
+Nb = 8000 
 
 
 
@@ -15,9 +16,6 @@ domain_data_y = uniform.rvs(size=N)
 
 domain_data = np.array([domain_data_x,domain_data_y]).T
 print(domain_data.shape)
-
-
-Nb = 3000
 
 def generate_random_bdry(Nb):
     '''

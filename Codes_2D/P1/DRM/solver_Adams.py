@@ -14,7 +14,7 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import model,pde,data,tools,g_tr,validation
 from time import time
-
+import csv
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
@@ -22,15 +22,19 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 torch.set_default_dtype(torch.float32)
 
 y = model.NN()
-y.apply(model.init_weights)
-
-dataname = '5000pts'
+# load weights if available
+if os.path.exists('Codes_2D/P1/DRM/results/y.pt'):
+    y = torch.load('Codes_2D/P1/DRM/results/y.pt', weights_only=False)
+else:
+    y.apply(model.init_weights)
+dataname = '20000pts'
 name = 'results/'
 
-lambda_parameter = 5000
+lambda_parameter = 8000
 
-bw_dir = lambda_parameter * 0.5
-bw_neu = 1.0
+nepochs = 18000
+bw_dir = 0.5 * lambda_parameter
+bw_neu = 0.5 * lambda_parameter
 
 if not os.path.exists(name):
     os.makedirs(name)
@@ -139,7 +143,7 @@ def closure():
 
 losslist = []
 
-for epoch in range(5000): 
+for epoch in range(nepochs): 
     loss, loss_int, loss_neumann, loss_diri = closure()
     losslist.append(loss)
 
@@ -290,6 +294,25 @@ print(f"h2 Error: {h2_error}")
 print(f"h2 relative Error: {h2_relativeError}")
 
 
+
+print(f"L2 Error: {l2_error}")
+print(f"L2relativeError : {l2_realtiveError}")
+print(f"h2 Error: {h2_error}")
+print(f"h2 relative Error: {h2_relativeError}")
+
+# Save errors to CSV
+csv_path = 'Codes_2D/P1/DRM/results/errors.csv'
+os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+
+with open(csv_path, 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Metric', 'Value'])
+    writer.writerow(['L2 Error', l2_error])
+    writer.writerow(['L2 Relative Error', l2_realtiveError])
+    writer.writerow(['H2 Error', h2_error])
+    writer.writerow(['H2 Relative Error', h2_relativeError])
+
+print(f"Errors saved to {csv_path}")
 
 
 
