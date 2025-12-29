@@ -1,0 +1,32 @@
+# Results directories
+results/
+Results/
+Figures/
+
+# Result files
+*.pkl
+*.pt
+
+# Generated plots
+*.png
+*.jpg
+*.jpeg
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Dataset files (optional - uncomment if you want to ignore datasets)
+# dataset/
+# **/dataset/
+
+# VS Code settings
+.vscode/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db

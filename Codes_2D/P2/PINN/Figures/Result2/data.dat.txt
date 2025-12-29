@@ -1,4 +1,0 @@
-L2 Error: 
-L2relativeError : 36%
-
-y_sym = x1**2*x2**2*(1-x1)**2*(1-x2)**2
