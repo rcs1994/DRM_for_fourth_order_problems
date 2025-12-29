@@ -74,15 +74,19 @@ f,bdrydata_dirichlet,bdrydata_neumann,ygt = tools.from_numpy_to_tensor([f_np,dir
 
 
 
-optimizer = opt.Adam(params, lr=1e-4, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.0)
+# Adam optimizer for initial training
+optimizer_adam = opt.Adam(params, lr=1e-4, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.0)
 
 # It reduces the learning rate by factor=0.1 if the loss hasn't improved for 100 epochs
-scheduler = opt.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=500)
+scheduler = opt.lr_scheduler.ReduceLROnPlateau(optimizer_adam, mode='min', factor=0.1, patience=500)
 
 # Alternatively, you can use MultiStepLR to decay the learning rate at specific milestones
 
 # Learning rate will decay by gamma at 10000 and 13000 iterations
-#scheduler = opt.lr_scheduler.MultiStepLR(optimizer, milestones=[8000, 12000], gamma=0.1)
+#scheduler = opt.lr_scheduler.MultiStepLR(optimizer_adam, milestones=[8000, 12000], gamma=0.1)
+
+# LBFGS optimizer for fine-tuning (will be used after Adam)
+optimizer_lbfgs = opt.LBFGS(params, line_search_fn='strong_wolfe', max_iter=20, tolerance_grad=1e-10, tolerance_change=1e-10)
 
 
 
@@ -92,14 +96,14 @@ loader = torch.utils.data.DataLoader([intx1,intx2],batch_size = 2000,shuffle = T
 
 
 
-def closure():
+def closure_adam():
     tot_loss = 0
     tot_loss_int = 0
     tot_loss_bdry = 0
 
 
     for i, subquad in enumerate(loader):
-        optimizer.zero_grad()
+        optimizer_adam.zero_grad()
         ttintx1 = Variable(subquad[0].float(), requires_grad=True)
         ttintx2 = Variable(subquad[1].float(), requires_grad=True)
 
@@ -109,7 +113,7 @@ def closure():
         )
 
         loss.backward()
-        optimizer.step()
+        optimizer_adam.step()
 
         tot_loss += loss
         tot_loss_int += loss_int
@@ -126,6 +130,32 @@ def closure():
 
     #if schedular is MultistepLR, then scheduler.step()
     return nploss, nploss_int, nploss_bdry
+
+
+def closure_lbfgs():
+    """Closure function for LBFGS optimizer - computes loss over all data"""
+    optimizer_lbfgs.zero_grad()
+    
+    tot_loss = 0
+    tot_loss_int = 0
+    tot_loss_bdry = 0
+
+    for i, subquad in enumerate(loader):
+        ttintx1 = Variable(subquad[0].float(), requires_grad=True)
+        ttintx2 = Variable(subquad[1].float(), requires_grad=True)
+
+        loss, loss_int, loss_bdry = pde.pdeloss(
+            y, ttintx1, ttintx2, f, tbdx1, tbdx2, tnx1, tnx2,
+            bdrydata_dirichlet, bdrydata_neumann, bw_dir, bw_neu, balancing_wt
+        )
+
+        tot_loss += loss
+        tot_loss_int += loss_int
+        tot_loss_bdry += loss_bdry
+
+    tot_loss.backward()
+    
+    return tot_loss
   
 
 
@@ -145,16 +175,66 @@ def closure():
 
 losslist = []
 
-for epoch in range(nepochs): 
-    loss, loss_int, loss_bdry = closure()
+print("=" * 80)
+print("PHASE 1: Training with Adam Optimizer")
+print("=" * 80)
+
+# Phase 1: Train with Adam optimizer
+adam_epochs = 10000
+for epoch in range(adam_epochs): 
+    loss, loss_int, loss_bdry = closure_adam()
     losslist.append(loss)
 
-    if epoch % 50 == 0:
+    if epoch % 100 == 0:
         print(f"Epoch {epoch} | Total loss: {loss:.8f} | Loss_int: {loss_int:.8f} | Loss_neumann: {loss_bdry:.8f}")
         validation.plot_2D(y,name+"y_plot/"+'epoch{}'.format(epoch))
         # Compute and print L2 error
         l2_error, l2_relative_error = validation.compute_error(y)
         print(f"Epoch {epoch} | L2 Error: {l2_error:.8f} | Relative L2 Error: {l2_relative_error:.8f}")
+
+print("\n" + "=" * 80)
+print("PHASE 2: Fine-tuning with LBFGS Optimizer")
+print("=" * 80)
+
+# Phase 2: Fine-tune with LBFGS optimizer
+lbfgs_iterations = 10000
+for iteration in range(lbfgs_iterations):
+    
+    optimizer_lbfgs.step(closure_lbfgs)
+    
+    # Evaluate loss after LBFGS step
+    if iteration % 100 == 0 or iteration == lbfgs_iterations - 1:
+        tot_loss = 0
+        tot_loss_int = 0
+        tot_loss_bdry = 0
+        
+        for i, subquad in enumerate(loader):
+            ttintx1 = Variable(subquad[0].float(), requires_grad=True)
+            ttintx2 = Variable(subquad[1].float(), requires_grad=True)
+
+            loss, loss_int, loss_bdry = pde.pdeloss(
+                y, ttintx1, ttintx2, f, tbdx1, tbdx2, tnx1, tnx2,
+                bdrydata_dirichlet, bdrydata_neumann, bw_dir, bw_neu, balancing_wt
+            )
+            tot_loss += loss
+            tot_loss_int += loss_int
+            tot_loss_bdry += loss_bdry
+        
+        loss_val = tot_loss.detach().numpy()
+        loss_int_val = tot_loss_int.detach().numpy()
+        loss_bdry_val = tot_loss_bdry.detach().numpy()
+        
+        losslist.append(loss_val)
+        
+        print(f"LBFGS Iteration {iteration} | Total loss: {loss_val:.8f} | Loss_int: {loss_int_val:.8f} | Loss_neumann: {loss_bdry_val:.8f}")
+        validation.plot_2D(y, name+"y_plot/"+'lbfgs_iter{}'.format(iteration))
+        # Compute and print L2 error
+        l2_error, l2_relative_error = validation.compute_error(y)
+        print(f"LBFGS Iteration {iteration} | L2 Error: {l2_error:.8f} | Relative L2 Error: {l2_relative_error:.8f}")
+
+print("\n" + "=" * 80)
+print("Training Complete!")
+print("=" * 80)
 
 
 
