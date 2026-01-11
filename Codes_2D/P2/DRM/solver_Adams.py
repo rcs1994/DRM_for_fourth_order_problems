@@ -196,7 +196,7 @@ print("PHASE 2: Fine-tuning with LBFGS Optimizer")
 print("=" * 80)
 
 # Phase 2: Fine-tune with LBFGS optimizer
-lbfgs_iterations = 0
+lbfgs_iterations = 10000
 for iteration in range(lbfgs_iterations):
     
     def lbfgs_closure():
