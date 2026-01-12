@@ -1,0 +1,58 @@
+# Configuration for Problem 2 - DRM
+problem: P2
+method: DRM
+
+# Model architecture
+model:
+  input_dim: 2
+  hidden_dim: 50
+  num_layers: 4
+  output_dim: 1
+
+# Data configuration
+data:
+  dataset_dir: ../Codes_2D/P2/DRM/dataset
+  dataname: 20000pts
+  batch_size: 2000
+
+# Training configuration
+training:
+  adam_epochs: 10000
+  lbfgs_iterations: 10000
+  bw_dir: 4000.0  # 0.5 * lambda_parameter (8000)
+  bw_neu: 4000.0  # 0.5 * lambda_parameter (8000)
+  lambda_parameter: 8000
+
+# Optimizer configuration
+optimizer:
+  adam:
+    lr: 0.001
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+    weight_decay: 0.0
+    scheduler: plateau
+    lr_factor: 0.5
+    lr_patience: 500
+  lbfgs:
+    line_search_fn: strong_wolfe
+    max_iter: 20
+    tolerance_grad: 1.0e-10
+    tolerance_change: 1.0e-10
+
+# Validation configuration
+validation:
+  frequency: 100  # Validate every N epochs
+  resolution: 50  # Grid resolution for validation
+
+# Checkpoint configuration
+checkpoint:
+  save_frequency: 100  # Save checkpoint every N epochs
+
+# Results
+results_dir: Codes_2D_refactored/experiments/P2/DRM/results
+save_plots: true
+
+# Other settings
+use_cuda: false
+resume_training: false
+seed: 42

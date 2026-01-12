@@ -31,3 +31,4 @@ __pycache__/
 .DS_Store
 Thumbs.db
 sec_num_exp.tex
+.claude/settings.local.json
