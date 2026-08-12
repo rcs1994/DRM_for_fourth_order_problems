@@ -60,10 +60,10 @@ class P4_PDE(BasePDE):
         loss_int_3 = torch.square(torch.mean(ones_vec * out))
 
         # Loss for PDE with reaction term
-        loss_int = 0.5 * loss_int_1 + 0.5 * loss_int_1_with_reaction - loss_int_2
+        #loss_int = 0.5 * loss_int_1 + 0.5 * loss_int_1_with_reaction - loss_int_2
 
         # Alternative: Loss for PDE without reaction term (commented in original)
-        # loss_int = 0.5 * loss_int_1 - loss_int_2 + balancing_wt * loss_int_3
+         loss_int = 0.5 * loss_int_1 - loss_int_2 + balancing_wt * loss_int_3
 
         # Boundary loss
         bout_u, bout_dudn = self.bdry(bdx1, bdx2, nx1, nx2, net)
