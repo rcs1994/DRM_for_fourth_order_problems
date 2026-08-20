@@ -56,7 +56,7 @@ class P2_PDE(BasePDE):
         loss_int_4 = self.mse_loss(u_yy, zero_vec)
         loss_int_f = torch.mean(out * pdedata)
 
-        loss_int_D2 = 0.5 * loss_int_1 + 0.5 * loss_int_2 + 0.5 * loss_int_3 + 0.5 * loss_int_4
+        loss_int_D2 = 0.5 * loss_int_1 + 0.5 * loss_int_2 + 0.5 * loss_int_3 + 0.5 * loss_int_4 
         loss_int = 0.5 * loss_int_1 + 0.5 * loss_int_2 + 0.5 * loss_int_3 + 0.5 * loss_int_4 - loss_int_f
 
         # Boundary loss
