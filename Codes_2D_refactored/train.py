@@ -65,9 +65,9 @@ def get_ground_truth_function(problem_name):
 def main():
     """Main training function."""
     parser = argparse.ArgumentParser(description='Train DRM solver for 2D fourth-order PDEs')
-    parser.add_argument('--config', type=str, required=True,
+    parser.add_argument('--config', type=str, required=False, default='config/p1_drm_config.yaml',
                         help='Path to configuration YAML file')
-    parser.add_argument('--gpu', action='store_true',
+    parser.add_argument('--gpu', action='store_true', default=False,
                         help='Use GPU if available')
     parser.add_argument('--resume', action='store_true',
                         help='Resume training from checkpoint')
