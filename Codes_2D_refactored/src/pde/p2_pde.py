@@ -14,8 +14,9 @@ class P2_PDE(BasePDE):
 
         Args:
             x1: First spatial coordinate
-            x2: Second spatial coordinate
-            net: Neural network model
+            x2: Second spatial coordinate 
+            net: Neural network model 
+
 
         Returns:
             Tuple of (u_xx, u_xy, u_yx, u_yy)
@@ -61,9 +62,12 @@ class P2_PDE(BasePDE):
 
         # Boundary loss
         bout_diri, bout_neumann = self.bdry(bdx1, bdx2, nx1, nx2, net)
-        loss_bdry_neumann = self.mse_loss(bdrydata_2, bout_neumann)
+        #loss_bdry_neumann = self.mse_loss(bdrydata_2, bout_neumann)
+        loss_bdry_neumann = torch.mean(bdrydata_2 * bout_neumann)
         loss_bdry_diri = self.mse_loss(bout_diri, bdrydata_1)
-        loss_bdry = bw_diri * loss_bdry_neumann + bw_diri * loss_bdry_diri
+        #loss_bdry = bw_diri * loss_bdry_neumann + bw_diri * loss_bdry_diri
+        loss_bdry = loss_bdry_neumann + bw_diri * loss_bdry_diri
+
 
         # Total loss
         loss = loss_int + loss_bdry
