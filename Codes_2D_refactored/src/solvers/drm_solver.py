@@ -186,6 +186,7 @@ class DRMSolver:
             loss_output = self.pde.pdeloss(
                 self.model, ttintx1, ttintx2,
                 self.train_data['f'],
+                self.train_data['ygt'],
                 self.train_data['bdx1'],
                 self.train_data['bdx2'],
                 self.train_data['nx1'],
@@ -233,6 +234,7 @@ class DRMSolver:
             loss_output = self.pde.pdeloss(
                 self.model, ttintx1, ttintx2,
                 self.train_data['f'],
+                self.train_data['ygt'],
                 self.train_data['bdx1'],
                 self.train_data['bdx2'],
                 self.train_data['nx1'],
@@ -309,6 +311,7 @@ class DRMSolver:
                     loss_output = self.pde.pdeloss(
                         self.model, ttintx1, ttintx2,
                         self.train_data['f'],
+                        self.train_data['ygt'],
                         self.train_data['bdx1'],
                         self.train_data['bdx2'],
                         self.train_data['nx1'],

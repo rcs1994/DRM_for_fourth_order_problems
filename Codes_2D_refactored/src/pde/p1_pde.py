@@ -34,7 +34,7 @@ class P1_PDE(BasePDE):
 
         return u_xx, u_xy, u_yx, u_yy
 
-    def pdeloss(self, net, intx1, intx2, pdedata, bdx1, bdx2, nx1, nx2,
+    def pdeloss(self, net, intx1, intx2, pdedata, ygt, bdx1, bdx2, nx1, nx2,
                 bdrydata_1, bdrydata_2, bw_diri, bw_neumann, **kwargs):
         """
         Compute PDE loss for Problem 1.

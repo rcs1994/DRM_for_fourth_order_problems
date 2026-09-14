@@ -32,7 +32,7 @@ class P4_PDE(BasePDE):
 
         return u, u_xx + u_yy
 
-    def pdeloss(self, net, intx1, intx2, pdedata, bdx1, bdx2, nx1, nx2,
+    def pdeloss(self, net, intx1, intx2, pdedata, ygt, bdx1, bdx2, nx1, nx2,
                 bdrydata_1, bdrydata_2, bw_diri, bw_neumann, **kwargs):
         """
         Compute PDE loss for Problem 4.
@@ -55,12 +55,15 @@ class P4_PDE(BasePDE):
 
         # Interior loss
         loss_int_1 = self.mse_loss(lap_u, zero_vec)
-        loss_int_1_with_reaction = self.mse_loss(u, zero_vec)
+        #loss_int_1_with_reaction = self.mse_loss(u, zero_vec)
+        avg = torch.mean(ygt)
+        loss_int_avg = torch.mean(out-avg)*torch.mean(out-avg)  # this term ensures uniqueness of the solution by penalizing deviation from the mean
         loss_int_2 = torch.mean(out * pdedata)
         loss_int_3 = torch.square(torch.mean(ones_vec * out))
 
         # Loss for PDE with reaction term
-        loss_int = 0.5 * loss_int_1 + 0.5 * loss_int_1_with_reaction - loss_int_2
+        #loss_int = 0.5 * loss_int_1 + 0.5 * loss_int_1_with_reaction - loss_int_2
+        loss_int = 0.5 * loss_int_1 + 0.5 *bw_diri*loss_int_avg - loss_int_2    # bw_diri is weight for average term
 
         # Alternative: Loss for PDE without reaction term (commented in original)
         # loss_int = 0.5 * loss_int_1 - loss_int_2 + balancing_wt * loss_int_3
