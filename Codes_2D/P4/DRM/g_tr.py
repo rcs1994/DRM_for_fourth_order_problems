@@ -8,10 +8,10 @@ x1, x2 = symbols('x1 x2')
 #y_sym = x1**2*x2**2*(1-x1)**2*(1-x2)**2
 
 # solution for PDE without reaction term
-#y_sym = (1/(2*pi**2))*sin(2*pi*x1)*sin(2*pi*x2) 
+y_sym = (1/(2*pi**2))*sin(2*pi*x1)*sin(2*pi*x2) 
 
 # solution for PDE with reaction term
-y_sym = (1/(2*pi**2))*sin(pi*x1)*sin(pi*x2)
+#y_sym = (1/(2*pi**2))*sin(pi*x1)*sin(pi*x2)
 
 #y_sym = x1*x2*(1-x1)*(1-x2)
 
