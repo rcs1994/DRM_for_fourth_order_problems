@@ -10,7 +10,7 @@ Usage:
 import os
 import sys
 import argparse
-import yaml
+import yaml   
 import torch
 
 # Add src to path

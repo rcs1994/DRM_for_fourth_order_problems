@@ -17,8 +17,8 @@ data:
 
 # Training configuration
 training:
-  adam_epochs: 500
-  lbfgs_iterations: 200
+  adam_epochs: 300
+  lbfgs_iterations: 20
   bw_dir: 4000.0  # 0.5 * lambda_parameter (8000)
   bw_neu: 4000.0  # 0.5 * lambda_parameter (8000)
   lambda_parameter: 8000
